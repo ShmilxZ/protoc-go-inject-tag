@@ -72,8 +72,24 @@ func parseFile(inputPath string, xxxSkip []string) (areas []textArea, err error)
 			// skip if field has no doc
 			if len(field.Names) > 0 {
 				name := field.Names[0].Name
-				if len(xxxSkip) > 0 && strings.HasPrefix(name, "XXX") {
-					currentTag := field.Tag.Value
+
+				// Skip XXX_* or protoimpl package
+				putSKip := strings.HasPrefix(name, "XXX")
+				if !putSKip {
+					fieldType, ok := field.Type.(*ast.SelectorExpr)
+					if ok {
+						packageIdent, ok := fieldType.X.(*ast.Ident)
+						if ok {
+							putSKip = packageIdent.Name == "protoimpl"
+						}
+					}
+				}
+
+				if len(xxxSkip) > 0 && putSKip  {
+					currentTag := "``"
+					if field.Tag != nil {
+						currentTag = field.Tag.Value
+					}
 					area := textArea{
 						Start:      int(field.Pos()),
 						End:        int(field.End()),
